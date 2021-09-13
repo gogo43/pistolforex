@@ -1,3 +1,3 @@
-# pistol Forex Tick Downloader form dukascopy
+# Pistol Forex Tick Downloader form dukascopy
 
 Forex tick history downloader from dukascopy
