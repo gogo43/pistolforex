@@ -1,3 +1,3 @@
-# pistol-yt
+# pistol Forex Tick Downloader form dukascopy
 
-Youtube downloader by pistol air
+Forex tick history downloader from dukascopy
