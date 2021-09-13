@@ -11,6 +11,7 @@ from io import BytesIO
 import pandas as pd
 import glob
 from glob import iglob
+import base64
 
 def getVideo(url): #Check to ensure that the video can be found
     global video_found, video
