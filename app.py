@@ -90,8 +90,7 @@ if url:
                    
               
                 st.success(f'Finished Downloading {video.title}!')
-                f = open("Downloads/*.mkv', "r")
-                st.markdown(get_binary_file_downloader_html(f), unsafe_allow_html=True)  
+ 
 
         if download_type == 'Audio Only (.mp3)':
             stream = video.streams.get_audio_only()
