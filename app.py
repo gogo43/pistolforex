@@ -14,7 +14,7 @@ import glob
 from glob import iglob
 import os
 
-st.title("DOWNLOAD HISTORY FROM DUKASCOPY")
+st.title("PISTOLAIR FOREX TICK DOWNLOAD HISTORY FROM DUKASCOPY")
 st.header('create by Pistolair')
 today = datetime.date.today()
 tomorrow = today + datetime.timedelta(days=1)
