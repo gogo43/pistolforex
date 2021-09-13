@@ -1,128 +1,99 @@
-import datetime
-import requests
-import os
-import re
-import pytube
-import subprocess
-from pytube import YouTube
 import streamlit as st
-from PIL import Image
-from io import BytesIO
+from datetime import date
+
+import duka.app.app as import_tick_method
+from duka.core.utils import TimeFrame
+import datetime
+
+
+import base64
+import time
+timestr =time.strftime("%Y%m%d-%H%M%S")
 import pandas as pd
 import glob
 from glob import iglob
-import base64
+import os
 
-def getVideo(url): #Check to ensure that the video can be found
-    global video_found, video
-    try:
-        video = YouTube(url)
-        video_found = True
-    except pytube.exceptions.RegexMatchError:
-        st.error('Invalid URL.')
-        video_found = False
-    except pytube.exceptions.VideoUnavailable:
-        st.error('This video is unavailable')
-        video_found = False
-    return video
+st.title("DOWNLOAD HISTORY FROM DUKASCOPY")
+st.header('create by Pistolair')
+today = datetime.date.today()
+tomorrow = today + datetime.timedelta(days=1)
+start_date = st.date_input('Start date', today)
+end_date = st.date_input('End date', tomorrow)
 
-def loadThumbnail(image_url):
-    response = requests.get(image_url)
-    img = Image.open(BytesIO(response.content))
-    return img
 
-def get_binary_file_downloader_html(bin_file, file_label='File'):
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    bin_str = base64.b64encode(data).decode()
-    href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file)}">Download {file_label}</a>'
-    return href
+timeframes = ("TICK","M1", "M5", "M10", "M15", "M30", "H1", "H4","D1")
+selected_timeframe = st.selectbox("Select timeframe for download", timeframes)
 
-def mkv_downloader(data):
-    b64 = base64.b64encode(data.encode()).decode()
-    new_filename = "DUKASCOPY_{}_.mkv".format(timestr)
+pairs = ("AUDCAD","AUDCHF", "AUDJPY", "AUDNZD", "AUDSGD", "CADCHF", "CADHKD", "CADJPY", "CHFJPY", "CHFSGD", "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY","EURUSD","GBPAUD","GBPCAD","GBPCHF","GBPJPY","GBPNZD","GBPUSD","NZDUSD","NZDJPY","NZDCAD","NZDCHF","USDCAD","USDCHF","USDJPY")
+selected_pairs = [st.selectbox("Select pairs for download", pairs)]
+
+def csv_downloader(data):
+    csvfile = data.to_csv()
+    b64 = base64.b64encode(csvfile.encode()).decode()
+    new_filename = "DUKASCOPY_{}_.csv".format(timestr)
     st.markdown("#### Download File ###")
-    href =f'<a href="data:file/mkv;base64,{b64}" download = "{new_filename}">Click Here!!</a>'
+    href =f'<a href="data:file/csv;base64,{b64}" download = "{new_filename}">Click Here!!</a>'
     st.markdown(href,unsafe_allow_html=True)
 
 
-@st.cache
-def getStats(video): # Return the formated video stats
-    header = (f'**{video.title}**' 
-            + f' *By:{video.author} *')
-    thumbnail = loadThumbnail(video.thumbnail_url)
-    info = (f'Length: **{datetime.timedelta(seconds = video.length)}** \n'
-          + f'Views: **{video.views:,}**')
-    return header, thumbnail, info
+#@st.cache
+def load_data(tickers):
+    if selected_timeframe == "TICK":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.TICK , ".", True)
+        return data 
+    elif selected_timeframe == "D1":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.D1 , ".", True)
+        return data 
+    elif selected_timeframe == "H4":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.H4 , ".", True)
+        return data 
+    elif selected_timeframe == "H1":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.H1 , ".", True)
+        return data 
+    elif selected_timeframe == "M30":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.M30 , ".", True)
+        return data 
+    elif selected_timeframe == "M15":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.M15 , ".", True)
+        return data 
+    elif selected_timeframe == "M10":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.M10 , ".", True)
+        return data 
+    elif selected_timeframe == "M5":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.M5 , ".", True)
+        return data 
+    elif selected_timeframe == "M1":
+        data = import_tick_method(tickers, start_date, end_date, 1, TimeFrame.M1 , ".", True)
+        return data 
 
-st.title('Pistol air YouTube Downloader')
 
-url = st.text_input('Enter the URL of the YouTube video')
 
-if url:
-    video = getVideo(url)
-    if video_found:
-        header, thumbnail, info = getStats(video)
-        st.header(header)
-        st.image(thumbnail, width = 750)
-        st.write(info)
-        download_type = st.radio(
-        'Select the type of download you would like', [
-        'Video and Audio (.mkv)', 
-        'Audio Only (.mp3)', 
-        'Video Only (.mp4)']
-        )
 
-        if download_type == 'Video and Audio (.mkv)':
-            video_stream = video.streams.filter(type = 'video', subtype = 'mp4').order_by(attribute_name = 'resolution').last()
-            audio_stream = video.streams.get_audio_only()
-            filesize = round((video_stream.filesize + audio_stream.filesize)/1000000, 2)
-            if st.button(f'Download (~{filesize} MB)'): 
-            # To get the highest resolution, the audio and video streams must be installed seperate as .mp4s,
-            # so the audio track must be converted to an mp3, then merged with the video, then the other files must be deleted
-                with st.spinner(
-                 f'Downloading {video.title}... ***Please wait to open any files until the download has finished***'
-                ):
-                    video_stream.download(filename = 'video-track')
-                    audio_stream.download(filename = 'audio-track')
-                    convert_mp3 = 'ffmpeg -i audio-track.mp4 audio-track.mp3'
-                    subprocess.run(convert_mp3, shell = True)
-                    
-                    formatted_title = re.sub("[^0-9a-zA-Z]+", "-", video.title)
-                    merge_audio_video = (
-                                         'ffmpeg -y -i audio-track.mp3 '
-                                         '-r 30 -i video-track.mp4 '
-                                         '-filter:a aresample=async=1 -c:a flac -c:v '
-                                        f'copy Downloads/{formatted_title}.mkv'
-                                          )
-                    subprocess.run(merge_audio_video, shell = True)
-                   
-              
-                st.success(f'Finished Downloading {video.title}!')
-                
-                path = os.getcwd()
-                mkv_file =glob.glob(os.path.join(path, "*.mkv"))
-                mkv_downloader(mkv_file)
+submit = st.button('Submit')
 
-        if download_type == 'Audio Only (.mp3)':
-            stream = video.streams.get_audio_only()
-            filesize = round(stream.filesize/1000000, 2)
-            if st.button(f'Download (~{filesize} MB)'):
-                with st.spinner(
-                 f'Downloading {video.title}... ***Please wait to open any files until the download has finished***'
-                ):
-                    stream.download(filename = 'audio')
-                    convert_mp3 = f'ffmpeg -i audio.mp4 Downloads/{re.sub("[^0-9a-zA-Z]+", "-", video.title)}.mp3'
-                    subprocess.run(convert_mp3, shell = True)
-                   
-                st.success(f'Finished Downloading {video.title}!')
+st.write('Press submit to download data')
 
-        if download_type == 'Video Only (.mp4)':
-            stream = video.streams.filter(type = 'video', subtype = 'mp4').order_by(attribute_name = 'resolution').last()
-            filesize = round(stream.filesize/1000000, 2)
-            if st.button(f'Download (~{filesize} MB)'):
-                with st.spinner(
-                 f'Downloading {video.title}... ***Please wait to open any files until the download has finished***'
-                ):
-                    stream.download(filename = video.title + ' Video Only', output_path = 'Downloads')
-                st.success(f'Finished Downloading {video.title}!')
+if submit:
+    data_load_state = st.text("Load data... Sik Sabar ya....")
+    data = load_data(selected_pairs)
+    data_load_state.text("Loading data... done!")
+    
+       
+    df = pd.read_csv(next(iglob('*.csv')))
+    st.dataframe(df)
+    csv_downloader(df)
+
+    path = os.getcwd()
+    csv_file =glob.glob(os.path.join(path, "*.csv"))
+
+    for f in csv_file:
+        df = pd.read_csv(f)
+        
+        File_name = f.split("/")[-1]
+        st.write('location :', f)
+        st.write('FIle Name :', File_name)
+
+   
+    
+
