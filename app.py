@@ -37,7 +37,7 @@ def get_binary_file_downloader_html(bin_file, file_label='File'):
     href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file)}">Download {file_label}</a>'
     return href
 
-def mkv_downloader(data)
+def mkv_downloader(data):
     b64 = base64.b64encode(data.encode()).decode()
     new_filename = "DUKASCOPY_{}_.mkv".format(timestr)
     st.markdown("#### Download File ###")
